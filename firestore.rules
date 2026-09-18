@@ -1,5 +1,13 @@
 rules_version = '2';
 
+// نموذج البيانات موثّق في docs/data-model.md
+//
+// المبدأ: كل مستند شبكة يحمل حقلين:
+//   sectorId   — القطاع اللي يتبعه (central, western, ...)
+//   visibility — 'public' بيانات عامة تجريبية يقرأها أي زائر
+//                'restricted' بيانات فعلية، لا يقرأها إلا عضو مصرّح له في نفس القطاع
+// الكتابة للمشرفين فقط في كل الأحوال.
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -11,9 +19,87 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // كل مستخدم يقرأ ويكتب مستنده فقط
+    // المشرف = له مستند في admins/{uid}. المستند يُنشأ من Firebase Console فقط.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // العضوية في members/{uid}.sectors — يكتبها المشرف فقط، فما يقدر أحد يرقّي نفسه.
+    function isMember(sectorId) {
+      return isSignedIn() && (
+        isAdmin() || (
+          exists(/databases/$(database)/documents/members/$(request.auth.uid))
+          && sectorId in get(/databases/$(database)/documents/members/$(request.auth.uid)).data.sectors
+        )
+      );
+    }
+
+    function canRead(data) {
+      return data.visibility == 'public' || isMember(data.sectorId);
+    }
+
+    // أقل قدر من التحقق عشان ما ينكتب مستند بدون الحقلين اللي تعتمد عليهم القراءة
+    function isScoped(data) {
+      return data.sectorId is string
+        && data.sectorId.size() > 0
+        && data.visibility in ['public', 'restricted'];
+    }
+
+    // كل مستخدم يقرأ ويكتب ملفه الشخصي فقط (لا صلاحيات فيه)
     match /users/{uid} {
       allow read, write: if isOwner(uid);
+    }
+
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    match /members/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // القطاعات: معرّف المستند هو نفسه sectorId
+    match /sectors/{sectorId} {
+      allow read: if resource.data.visibility == 'public' || isMember(sectorId);
+      allow create, update: if isAdmin()
+        && request.resource.data.visibility in ['public', 'restricted'];
+      allow delete: if isAdmin();
+    }
+
+    // مجموعات الشبكة — نفس القاعدة للكل
+    match /substations/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /feeders/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /ties/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // طبقات جغرافية (مناطق التخطيط، المشاريع الكبرى، مواقع البحث)
+    match /zones/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // نتائج محسوبة محفوظة (اختياري) — لقطة لكل قطاع/فترة/سيناريو
+    match /snapshots/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // أي مسار ما له قاعدة صريحة فوق = مرفوض
