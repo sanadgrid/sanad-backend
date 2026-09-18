@@ -51,6 +51,16 @@
 نقطة ربط مفتوحة عادةً بين مغذيين من محطتين مختلفتين بنفس الجهد.
 `sectorId`, `fromFeederId`, `toFeederId`, `construction`, `circuits` (1\|2), `capacityMva`, `switching` (`remote`\|`manual`), `visibility`.
 
+### `networkBundles/{sectorId}_{visibility}_{n}` — اللي تقرأه اللوحة فعلياً
+كل قراءة مستند في Firestore محسوبة (الحصة المجانية 50 ألف/يوم). قراءة القطاع مستنداً مستنداً = 159 قراءة لكل فتح صفحة، وهذا استهلك الحصة كاملة في يوم واحد (2026-09-18). الحل: عند النشر تنكتب نسخة مجمّعة من القطاع:
+
+`sectorId`, `visibility`, `index`, `count` (عدد الأجزاء), `version` (وقت النشر), `payload` — نص JSON فيه `{ sector, substations, feeders, ties }`، مقسّم لأجزاء أقل من 700KB.
+
+المجموعات التفصيلية (`substations`, `feeders`, `ties`) تبقى **مصدر الحقيقة للتعديل**، والحزمة نسخة للقراءة تتجدد مع كل نشر. اللوحة تقرأ الحزمة فقط (قراءة–قراءتين)، وتحتفظ بها محلياً وتقارن `version` قبل ما تعيد التحميل.
+
+### `mapLayerIndex/{sectorId}` — فهرس الطبقات المستوردة
+مستند واحد فيه مصفوفة أوصاف الطبقات (`layers`) بدل قراءة ~100 مستند وصف مع كل فتح. يتحدّث مع كل استيراد أو حذف. `sectorId`, `visibility: 'restricted'`, `layers`, `updatedAt`.
+
 ### `mapLayers/{layerId}` و `mapLayerChunks/{layerId}_{n}` — طبقات مستوردة من KMZ/KML
 الاستيراد يتم من صفحة المشرف داخل المتصفح ويكتب مباشرة هنا. **الملف نفسه ما يمر على أي ريبو.**
 

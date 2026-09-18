@@ -95,6 +95,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // حزمة الشبكة: القطاع كامل (محطات + مغذيات + ربط) في مستند أو مستندين، عشان فتح
+    // الصفحة يكلّف قراءة أو قراءتين بدل مئات. تتولد عند النشر من المجموعات التفصيلية.
+    match /networkBundles/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // فهرس الطبقات المستوردة: مستند واحد لكل قطاع بدل قراءة وصف كل طبقة لحاله
+    match /mapLayerIndex/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
     // طبقات الخريطة المستوردة (KMZ/KML): مستند وصفي لكل طبقة + أجزاء تحمل الأشكال.
     // الأجزاء منفصلة لأن المستند الواحد حده 1MB، ولأن الطبقة ما تنقرأ إلا لما تتفعّل.
     match /mapLayers/{id} {
