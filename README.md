@@ -15,15 +15,15 @@
 
 ## إعداد النشر التلقائي (مرة واحدة)
 
-1. Firebase Console ← ⚙ Project settings ← **Service accounts** ← **Generate new private key** (ينزل ملف JSON).
-2. Google Cloud Console ← IAM ← أعط حساب الخدمة هذي الأدوار:
-   - `Firebase Rules Admin`
-   - `Cloud Datastore Index Admin`
-   - `Service Usage Viewer`
-3. GitHub ← هذا الريبو ← Settings ← Secrets and variables ← Actions ← **New repository secret**:
-   - الاسم: `FIREBASE_SERVICE_ACCOUNT`
-   - القيمة: محتوى ملف JSON كامل.
-4. احذف ملف JSON من جهازك أو احفظه في مكان آمن. **لا ترفعه على Git أبداً** (الـ `.gitignore` يحجبه احتياطاً).
+النشر يستخدم **Workload Identity Federation**: GitHub يثبت هويته لـ Google مباشرة، بدون مفاتيح JSON ولا أي secret في GitHub. (إنشاء المفاتيح محظور أصلاً بسياسة المنظمة.)
+
+1. افتح [Google Cloud Shell](https://shell.cloud.google.com/?project=sanadgrid-5176a) بحساب مالك المشروع.
+2. شغّل سكربت الإعداد:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/sanadgrid/sanad-backend/main/scripts/setup-github-deploy.sh | bash
+   ```
+
+السكربت ينشئ حساب خدمة `github-deployer` بصلاحيات نشر قواعد وفهارس Firestore فقط، ويسمح لهذا الريبو تحديداً (`sanadgrid/sanad-backend`) باستخدامه. آمن تشغيله أكثر من مرة.
 
 بعدها أي push على `main` ينشر القواعد. تقدر تشغله يدوياً من تبويب Actions ← Run workflow.
 

@@ -9,11 +9,18 @@ concurrency:
   group: firebase-deploy
   cancel-in-progress: false
 
+env:
+  PROJECT_ID: sanadgrid-5176a
+  # معرّفات وليست أسراراً — الوصول محكوم بشرط اسم الريبو داخل Google Cloud
+  WORKLOAD_IDENTITY_PROVIDER: projects/930930674060/locations/global/workloadIdentityPools/github/providers/sanad-backend
+  SERVICE_ACCOUNT: github-deployer@sanadgrid-5176a.iam.gserviceaccount.com
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write # مطلوب عشان GitHub يثبت هويته لـ Google بدون مفتاح
     steps:
       - uses: actions/checkout@v4
 
@@ -21,11 +28,10 @@ jobs:
         with:
           node-version: 22
 
-      # يقرأ مفتاح حساب الخدمة من الـ secret ويطلع منه project_id تلقائياً
-      - id: auth
-        uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
 
       - name: Deploy Firestore rules and indexes
-        run: npx --yes firebase-tools@latest deploy --only firestore --project "${{ steps.auth.outputs.project_id }}" --non-interactive
+        run: npx --yes firebase-tools@latest deploy --only firestore --project "$PROJECT_ID" --non-interactive
