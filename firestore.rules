@@ -95,6 +95,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // طبقات الخريطة المستوردة (KMZ/KML): مستند وصفي لكل طبقة + أجزاء تحمل الأشكال.
+    // الأجزاء منفصلة لأن المستند الواحد حده 1MB، ولأن الطبقة ما تنقرأ إلا لما تتفعّل.
+    match /mapLayers/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /mapLayerChunks/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data)
+        && request.resource.data.layerId is string;
+      allow delete: if isAdmin();
+    }
+
     // نتائج محسوبة محفوظة (اختياري) — لقطة لكل قطاع/فترة/سيناريو
     match /snapshots/{id} {
       allow read: if canRead(resource.data);

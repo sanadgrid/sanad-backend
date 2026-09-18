@@ -51,6 +51,17 @@
 نقطة ربط مفتوحة عادةً بين مغذيين من محطتين مختلفتين بنفس الجهد.
 `sectorId`, `fromFeederId`, `toFeederId`, `construction`, `circuits` (1\|2), `capacityMva`, `switching` (`remote`\|`manual`), `visibility`.
 
+### `mapLayers/{layerId}` و `mapLayerChunks/{layerId}_{n}` — طبقات مستوردة من KMZ/KML
+الاستيراد يتم من صفحة المشرف داخل المتصفح ويكتب مباشرة هنا. **الملف نفسه ما يمر على أي ريبو.**
+
+`mapLayers`: `sectorId`, `visibility` (دائماً `restricted` للبيانات الفعلية), `name`, `path` (مسار المجلد في الملف الأصلي), `sourceFile`, `importedAt`, `counts` `{ point, line, polygon }`, `bbox` `[west, south, east, north]`, `chunks` (عدد الأجزاء), `style` `{ color }`.
+
+`mapLayerChunks`: `sectorId`, `visibility`, `layerId`, `index`, `features` — نص JSON لمصفوفة عناصر GeoJSON مختصرة (`{ t: 'p'|'l'|'g', n: name, d: description, c: coordinates }`)، كل جزء أقل من 700KB.
+
+ليش مو مستند لكل عنصر؟ الملف فيه آلاف العناصر، ومستند لكل عنصر يعني آلاف القراءات مع كل فتح للخريطة. الطبقة تنقرأ كأجزاء قليلة، وفقط لما المستخدم يفعّلها.
+
+المحطات الفعلية اللي بتدخل في **الحساب** مكانها `substations` + `feeders` + `ties` (تحتاج أحمال وسعات). الطبقات هنا للعرض الجغرافي فقط.
+
 ### `zones/{id}` (لاحقاً)
 مناطق التخطيط، المشاريع الكبرى، مواقع البحث عن محطات. `sectorId`, `kind`, `name`, `geometry` (GeoJSON كنص — Firestore ما يدعم المصفوفات المتداخلة), `visibility`.
 
