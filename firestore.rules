@@ -103,6 +103,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // خطط التغذية البديلة: مستند واحد لكل قطاع فيه كل الحالات (رئيسي + بدائله وأحمالهم)،
+    // عشان فتح الصفحة يكلّف قراءة واحدة. تحمل أرقام محطات فعلية، فهي مقيّدة دائماً.
+    match /backupPlans/{id} {
+      allow read: if canRead(resource.data);
+      allow create, update: if isAdmin() && isScoped(request.resource.data)
+        && request.resource.data.visibility == 'restricted';
+      allow delete: if isAdmin();
+    }
+
     // فهرس الطبقات المستوردة: مستند واحد لكل قطاع بدل قراءة وصف كل طبقة لحاله
     match /mapLayerIndex/{id} {
       allow read: if canRead(resource.data);
