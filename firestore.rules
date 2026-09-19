@@ -4,8 +4,8 @@ rules_version = '2';
 //
 // المبدأ: كل مستند شبكة يحمل حقلين:
 //   sectorId   — القطاع اللي يتبعه (central, western, ...)
-//   visibility — 'public' بيانات عامة تجريبية يقرأها أي زائر
-//                'restricted' بيانات فعلية، لا يقرأها إلا عضو مصرّح له في نفس القطاع
+//   visibility — 'public' بيانات تجريبية · 'restricted' بيانات فعلية
+//                الاثنين لا يقرأهم إلا مشرف أو عضو مصرّح له في نفس القطاع (اللوحة مقفولة بالكامل)
 // الكتابة للمشرفين فقط في كل الأحوال.
 
 service cloud.firestore {
@@ -35,8 +35,10 @@ service cloud.firestore {
       );
     }
 
+    // اللوحة مقفولة بالكامل: لا قراءة لأي مستند — حتى التجريبي — إلا لمشرف أو عضو في
+    // القطاع. حقل visibility يبقى للتمييز بين التجريبي والفعلي، لكنه ما عاد يفتح القراءة.
     function canRead(data) {
-      return data.visibility == 'public' || isMember(data.sectorId);
+      return isMember(data.sectorId);
     }
 
     // أقل قدر من التحقق عشان ما ينكتب مستند بدون الحقلين اللي تعتمد عليهم القراءة
@@ -63,7 +65,7 @@ service cloud.firestore {
 
     // القطاعات: معرّف المستند هو نفسه sectorId
     match /sectors/{sectorId} {
-      allow read: if resource.data.visibility == 'public' || isMember(sectorId);
+      allow read: if isMember(sectorId);
       allow create, update: if isAdmin()
         && request.resource.data.visibility in ['public', 'restricted'];
       allow delete: if isAdmin();
